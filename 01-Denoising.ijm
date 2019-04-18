@@ -1,11 +1,23 @@
-//Open C04B19Raw140keV
+//-----------------------------------------------------------------------------
+// Segmentation workflow part 1: denoising
+// View online documentation at 
+// https://github.com/rodolfoavictor/WholeCoreSegmentation
+//
+// Author: Rodolfo A. Victor
+// Last modified: 18-Apr-2019
+//
+// Requirements: Non-local means denoising plugin version 1.4.5
+//               http://fiji.sc/Non_Local_Means_Denoise
+//
+//               Raw data file C04B10_Raw140keV.raw from
+//               http://www.digitalrocksportal.org/projects/102 
+//-----------------------------------------------------------------------------
 
-//--------------------------------------------------------------------
-//Denoise
-//--------------------------------------------------------------------
-//Import raw file and rename to "Original" before running the code below
 
-//Run non-local means. Results can vary depending on the implementation
+//Import C04B10_Raw140keV.raw and rename 
+//to "Original" before running the code below
+
+//Run non-local means. Results may vary depending on the implementation
 selectWindow("Original");
 run("32-bit");
 setMinAndMax(-1500, 4000);

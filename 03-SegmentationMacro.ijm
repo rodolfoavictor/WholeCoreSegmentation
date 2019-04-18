@@ -1,3 +1,22 @@
+//-----------------------------------------------------------------------------
+// Segmentation workflow part 3: segmenting macro regions
+// View online documentation at 
+// https://github.com/rodolfoavictor/WholeCoreSegmentation
+//
+// Author: Rodolfo A. Victor
+// Last modified: 18-Apr-2019
+//
+// Requirements: Parallel Iterative Deconvolution plugin
+//               https://imagej.net/Parallel_Iterative_Deconvolution
+//
+//               Raw data file C04B10_Raw140keV.raw from
+//               http://www.digitalrocksportal.org/projects/102 
+//-----------------------------------------------------------------------------
+
+
+//Import denoised raw data from part 1 and rename image to "Denoised"
+//You can run part by part by selecting blocks delimited by "//--------"
+
 //Import denoised_crpop raw data and rename image to "Denoise_Crop"
 //Import deblurred raw data and rename image to "Deblurred"
 

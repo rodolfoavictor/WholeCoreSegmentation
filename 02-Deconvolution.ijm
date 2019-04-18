@@ -1,27 +1,41 @@
-//--------------------------------------------------------------------
-//Deconvolution
-//https://imagej.net/Parallel_Iterative_Deconvolution
-//version 1.9
-//--------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Segmentation workflow part 2: deconvolution
+// View online documentation at 
+// https://github.com/rodolfoavictor/WholeCoreSegmentation
+//
+// Author: Rodolfo A. Victor
+// Last modified: 18-Apr-2019
+//
+// Requirements: Parallel Iterative Deconvolution plugin
+//               https://imagej.net/Parallel_Iterative_Deconvolution
+//
+//               Denoised tomogram from part 1
+//-----------------------------------------------------------------------------
 
-//Import denoised raw data and rename image to "Denoise"
+//Import denoised raw data from part 1 and rename image to "Denoised"
+//You can run part by part by selecting blocks delimited by "//--------"
 
+//-----------------------------------------------------------------------------
 //A. Create non-negative TIFF version for the deblurring filter
+//Deconvolution filter implementation requires non-negative values
+//-----------------------------------------------------------------------------
 selectWindow("Denoised");
 run("Select None");
 run("Properties...", "unit=mm pixel_width=0.488 pixel_height=0.488 voxel_depth=1.25");
-run("Add...", "value=3000 stack"); //Deconvolution implementation requires non-negative values
+run("Add...", "value=3000 stack"); 
 path=getInfo("image.directory");
 saveAs("Tiff", path + File.separator + "Denoised.tiff");
-run("Subtract...", "value=3000 stack"); //Restore raw image
+run("Subtract...", "value=3000 stack");
 rename("Denoised");
 
-//B. Fit error function at the transition air-quartz
+//-----------------------------------------------------------------------------
+//B. Fit error function at the transition air-quartz 
 //and generate point spread function
+//-----------------------------------------------------------------------------
 selectWindow("Denoised");
 path=getInfo("image.directory");
 setSlice(nSlices/2);
-makeLine(235, 468, 260, 468); //<-- Make sure this line passes trhough the center of the calibration bar
+makeLine(235, 468, 260, 468); //<-- Make sure this line passes through the center of the calibration bar
 run("Plot Profile");
 Plot.getValues(xpoints, ypoints);
 Fit.doFit(24, xpoints, ypoints);
@@ -50,7 +64,9 @@ for (k=1; k<=nSlices; k++) {
 setSlice(nSlices/2);
 saveAs("Tiff", path + File.separator + "PSF.tiff");
 
-//D. Deconvolve
+//-----------------------------------------------------------------------------
+//C. Deconvolve
+//-----------------------------------------------------------------------------
 selectWindow("Denoised");
 path=getInfo("image.directory");
 pathToBlurredImage = path + "Denoised.tiff";
@@ -75,7 +91,9 @@ db = "false";
 detectDivergence = "true";
 call("edu.emory.mathcs.restoretools.iterative.ParallelIterativeDeconvolution3D.deconvolveWPL", pathToBlurredImage, pathToPsf, pathToDeblurredImage, boundary, resizing, output, precision, threshold, maxIters, nOfThreads, showIter, gamma, filterXY, filterZ, normalize, logMean, antiRing, changeThreshPercent, db, detectDivergence);'
 
-//E. Correct values, crop, and save raw
+//-----------------------------------------------------------------------------
+//D. Correct values, crop, and save raw
+//-----------------------------------------------------------------------------
 run("Input/Output...", "save"); //Write in little-endian byte order
 selectWindow("Denoised");
 path=getInfo("image.directory");
