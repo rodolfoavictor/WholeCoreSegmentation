@@ -6,7 +6,10 @@
 // Author: Rodolfo A. Victor
 // Last modified: 18-Apr-2019
 //
-// Requirements: Macro regions segmentation from part 3
+// Requirements: Statistical region mergin plugin
+//                https://imagej.net/Statistical_Region_Merging
+//
+//               Macro regions segmentation from part 3
 //               Beam hardening corrected image from part 4
 //-----------------------------------------------------------------------------
 
