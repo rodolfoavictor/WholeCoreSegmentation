@@ -1,5 +1,17 @@
-//Import denoised_crpop raw data 
-//Import SegMacro raw data 
+//-----------------------------------------------------------------------------
+// Segmentation workflow part 4: beam hardening corrections
+// View online documentation at 
+// https://github.com/rodolfoavictor/WholeCoreSegmentation
+//
+// Author: Rodolfo A. Victor
+// Last modified: 18-Apr-2019
+//
+// Requirements: Cropped denoised image from part 2
+//               Macro regions segmentation from part 3
+//-----------------------------------------------------------------------------
+
+//Import cropped denoised raw data from part 2
+//Import macro regions segmentation from part 4
 
 selectWindow("Denoised_Crop.raw");
 rename("Denoised_Crop");

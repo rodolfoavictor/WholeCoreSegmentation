@@ -1,5 +1,19 @@
+//-----------------------------------------------------------------------------
+// Segmentation workflow part 5: segmenting micro regions
+// View online documentation at 
+// https://github.com/rodolfoavictor/WholeCoreSegmentation
+//
+// Author: Rodolfo A. Victor
+// Last modified: 18-Apr-2019
+//
+// Requirements: Macro regions segmentation from part 3
+//               Beam hardening corrected image from part 4
+//-----------------------------------------------------------------------------
+
 //Import denoised_BHC raw data 
 //Import SegMacro raw data
+//You can run part by part by selecting blocks delimited by "//--------"
+
 
 selectWindow("SegMacro.raw");
 rename("SegMacro");
@@ -9,9 +23,9 @@ setMinAndMax(0,3);
 selectWindow("Denoised_BHC.raw");
 rename("Denoised_BHC");
 
-//----------------------------------------------------------------------
-//Create gray value only with phase 2 (micro regions in SegMacro)
-//----------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//A. Create gray value only with phase 2 (micro regions in SegMacro)
+//-----------------------------------------------------------------------------
 selectWindow("SegMacro")
 run("Duplicate...", "title=IntensityPhase2 duplicate");
 setThreshold(2,2);
@@ -21,9 +35,9 @@ run("32-bit");
 imageCalculator("Divide stack", "IntensityPhase2","IntensityPhase2");
 imageCalculator("Multiply stack", "IntensityPhase2","Denoised_BHC");
 
-//----------------------------------------------------------------------
-//Enhance constrast in preparation for statistical region merging
-//----------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//B. Enhance constrast in preparation for statistical region merging
+//-----------------------------------------------------------------------------
 selectWindow("IntensityPhase2");
 //Get phase 2 intensity histogram
 run("Histogram", "bins=256 use x_min=-1000 x_max=3108.45 y_max=Auto stack");
@@ -59,9 +73,9 @@ run("8-bit");
 run("Enhance Contrast...", "saturated=0.4 normalize equalize process_all use");
 rename("IntensityPhase2Normalized");
 
-//----------------------------------------------------------------------
-//Recursive statistical region merging
-//----------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//C. Recursive statistical region merging
+//-----------------------------------------------------------------------------
 itermax=50;
 Q=1024;
 targetnumberofphases=10;
@@ -99,9 +113,9 @@ for (iter=0; iter<=itermax; iter++){
 run("Collect Garbage");
 
 
-//----------------------------------------------------------------------
-//Sort regions after SRM
-//----------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//D. Sort regions after SRM
+//-----------------------------------------------------------------------------
 run("Clear Results");
 selectWindow("SRM");
 run("Duplicate...", "title=SRMsorted duplicate");
@@ -124,9 +138,9 @@ setMinAndMax(0,maxphase);
 print("Number of micro phases: "+maxphase);
 setMinAndMax(0,maxphase+1);
 
-//----------------------------------------------------------------------
-//Merge with macro regions
-//----------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//E. Merge with macro regions
+//-----------------------------------------------------------------------------
 //Create regions starting with phase 2
 selectWindow("SRMsorted");
 run("Duplicate...", "title=MacroMicroMerge duplicate");
@@ -169,9 +183,9 @@ run("Multiply...","value="+(maxphase+1)+" stack");
 imageCalculator("Add stack", "MacroMicroMerge","MaskPhase3");
 close("MaskPhase3");
 
-//----------------------------------------------------------------------
-//Save...
-//----------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//F. Save...
+//-----------------------------------------------------------------------------
 selectWindow("SegMacro");
 path=getInfo("image.directory");
 selectWindow("MacroMicroMerge");
