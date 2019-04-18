@@ -9,41 +9,64 @@ setMinAndMax(0,3);
 selectWindow("Denoised_BHC.raw");
 rename("Denoised_BHC");
 
-//Create mask for phase 2 (micro regions in SegMacro)
+//----------------------------------------------------------------------
+//Create gray value only with phase 2 (micro regions in SegMacro)
+//----------------------------------------------------------------------
 selectWindow("SegMacro")
-run("Duplicate...", "title=Phase2 duplicate");
+run("Duplicate...", "title=IntensityPhase2 duplicate");
 setThreshold(2,2);
 run("Convert to Mask", "method=Default background=Default black");
 run("Divide...","value=255 stack");
-setMinAndMax(0, 1);
-run("Duplicate...", "title=IntensityPhase2 duplicate");
 run("32-bit");
 imageCalculator("Divide stack", "IntensityPhase2","IntensityPhase2");
 imageCalculator("Multiply stack", "IntensityPhase2","Denoised_BHC");
 
-//Resample Intensity to 8-bit based on min and max of phase 2 grays
+//----------------------------------------------------------------------
+//Enhance constrast in preparation for statistical region merging
+//----------------------------------------------------------------------
 selectWindow("IntensityPhase2");
-minvalue=200000;
-maxvalue=-200000;
-for (k=1; k<=nSlices; k++) {
-    setSlice(k);
-    getStatistics(area, mean, min, max);
-    if (min<minvalue) minvalue=min;
-    if (max>maxvalue) maxvalue=max;
+//Get phase 2 intensity histogram
+run("Histogram", "bins=256 use x_min=-1000 x_max=3108.45 y_max=Auto stack");
+Plot.getValues(x, y);
+close("Histogram of IntensityPhase2");
+//Transform into cummulative histogram
+for (i=1; i<y.length; i++) {
+	y[i]+=y[i-1]; 
 }
-print(minvalue+"-----"+maxvalue);
-setMinAndMax(minvalue,maxvalue);
+//Normalize for cummulative density function
+for (i=0; i<y.length; i++) {
+	y[i]/=y[y.length-1]; 
+}
+//Get percentile 1
+for (i=0; i<y.length; i++) {  
+	if (y[i]>0.01) {
+		perc01=x[i];
+		break;
+	}
+}
+//Get percentile 99
+for (i=y.length-1; i>=0; i--) {  
+	if (y[i]<0.99) {
+		perc99=x[i];
+		break;
+	}
+}
+//Modify dynamic range and convert to 8-bit
+selectWindow("IntensityPhase2");
+setMinAndMax(perc01,perc99);
 run("8-bit");
-rename("SRM");
-
 //Histogram equalization
 run("Enhance Contrast...", "saturated=0.4 normalize equalize process_all use");
+rename("IntensityPhase2Normalized");
 
+//----------------------------------------------------------------------
 //Recursive statistical region merging
+//----------------------------------------------------------------------
 itermax=50;
 Q=1024;
 targetnumberofphases=10;
-selectWindow("SRM");
+selectWindow("IntensityPhase2Normalized");
+rename("SRM");
 for (iter=0; iter<=itermax; iter++){
     print("Merging regions: it "+iter+" of "+itermax+", q="+Q);
     selectWindow("SRM");
@@ -73,12 +96,15 @@ for (iter=0; iter<=itermax; iter++){
     if (numberphases<targetnumberofphases) break;
     Q=Q/2;
 }
-print("Number phases: "+numberphases);
 run("Collect Garbage");
 
-//Sort regions after merging
+
+//----------------------------------------------------------------------
+//Sort regions after SRM
+//----------------------------------------------------------------------
 run("Clear Results");
 selectWindow("SRM");
+run("Duplicate...", "title=SRMsorted duplicate");
 setSlice(1);
 getHistogram(values,counts,256);
 for (k=1; k<=nSlices; k++) {
@@ -86,7 +112,7 @@ for (k=1; k<=nSlices; k++) {
     getHistogram(valuesaux,countsaux,256);
     for (m=0; m<256; m++) counts[m]+=countsaux[m];
 }
-maxphase=-1;
+maxphase=1; //<-Start putting micro regions in phase 2
 for (k=0; k<256; k++) {
     print("Sorting regions: "+k+"/255");
     if (counts[k]>0)  {
@@ -95,20 +121,71 @@ for (k=0; k<256; k++) {
     }
 }
 setMinAndMax(0,maxphase);
-rename("MicroRegions");
 print("Number of micro phases: "+maxphase);
-
-selectWindow("FinalMicroRegions");
 setMinAndMax(0,maxphase+1);
 
-//Merge with macro regions <-NEEDS FINISHING
-selectWindow("MicroRegions");
-run("Duplicate...", "title=FinalSegmentation duplicate");
-imageCalculator("Multiply stack", "FinalSegmentation","Phase2");
+//----------------------------------------------------------------------
+//Merge with macro regions
+//----------------------------------------------------------------------
+//Create regions starting with phase 2
+selectWindow("SRMsorted");
+run("Duplicate...", "title=MacroMicroMerge duplicate");
 
+//Enforce zero outside macro phase 2
 selectWindow("SegMacro");
-run("Duplicate...", "title=MacroPhases duplicate");
-run("Macro...", "code=[if (v==2) v=0] stack");
-run("Macro...", "code=[if (v==3) v="+(maxphase+2)+"] stack");
+run("Duplicate...", "title=MaskPhase2 duplicate");
+setThreshold(2,2);
+run("Convert to Mask", "method=Default background=Default black");
+run("Divide...","value=255 stack");
+setMinAndMax(0, 1);
+imageCalculator("Multiply stack", "MacroMicroMerge","MaskPhase2");
+close("MaskPhase2");
 
-run("Macro...", "code=[if (v==3) v=8] stack");
+//Add macro phase 1
+selectWindow("SegMacro")
+run("Duplicate...", "title=MaskPhase1 duplicate");
+setThreshold(1,1);
+run("Convert to Mask", "method=Default background=Default black");
+run("Divide...","value=255 stack");
+setMinAndMax(0, 1);
+imageCalculator("Add stack", "MacroMicroMerge","MaskPhase1");
+close("MaskPhase1");
+
+//Add macro phase 3 as the last segmentation phase
+selectWindow("MacroMicroMerge");
+run("Histogram", "bins=256 x_min=0 x_max=256 y_max=Auto stack");
+Plot.getValues(x, y);
+close("Histogram of MacroMicroMerge");
+maxphase=-1;
+for (i=1; i<y.length; i++) {
+	if (y[i]>0) maxphase=x[i]; 
+}
+selectWindow("SegMacro")
+run("Duplicate...", "title=MaskPhase3 duplicate");
+setThreshold(3,3);
+run("Convert to Mask", "method=Default background=Default black");
+run("Divide...","value=255 stack");
+run("Multiply...","value="+(maxphase+1)+" stack");
+imageCalculator("Add stack", "MacroMicroMerge","MaskPhase3");
+close("MaskPhase3");
+
+//----------------------------------------------------------------------
+//Save...
+//----------------------------------------------------------------------
+selectWindow("SegMacro");
+path=getInfo("image.directory");
+selectWindow("MacroMicroMerge");
+saveAs("Raw Data", path + File.separator + "Segmentation.raw");
+
+// Write meta data in a header
+HeaderFile = path + File.separator + "Segmentation.hdr";      
+f=File.delete(HeaderFile);
+f=File.open(HeaderFile);
+print(f,"nx="+getWidth());
+print(f,"ny="+getHeight());
+print(f,"nz="+nSlices);
+print(f,"hx=0.488 mm");
+print(f,"hy=0.488 mm");
+print(f,"hz=1.25 mm");
+print(f,"format 8 bit unsigned integer");
+File.close(f);    
